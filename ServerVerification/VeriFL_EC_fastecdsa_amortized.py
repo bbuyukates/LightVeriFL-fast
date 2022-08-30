@@ -412,7 +412,7 @@ if __name__ == "__main__":
 
         time_out.append(result_set)
 
-        pickle.dump(time_out, open('./results/VeriFL_fast_amortized_N' + str(N) +'_U' + str(U) + '_d' + str(d) + + '_L' + str(batch), 'wb'), -1)
+        pickle.dump(time_out, open('./results/VeriFL_fast_amortized_N' + str(N) +'_U' + str(U) + '_d' + str(d) + '_L' + str(batch), 'wb'), -1)
 
 
     elif rank <= N:
