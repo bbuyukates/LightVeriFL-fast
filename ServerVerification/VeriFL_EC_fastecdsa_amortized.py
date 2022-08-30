@@ -19,11 +19,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-num_pk_per_user = 2
-
-N_repeat = 5  # number of repetitions to measure the average runtime.
-server_agg_gradient_epochs = [None] * N_repeat
-agg_client_hashes_epochs = [None] * N_repeat
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(process)s %(asctime)s.%(msecs)03d - {%(module)s.py (%(lineno)d)} - %(funcName)s(): %(message)s',
@@ -45,10 +40,22 @@ elif len(sys.argv) == 4:
     N = int(sys.argv[1])
     U = int(sys.argv[2])
     d = int(sys.argv[3])
+    batch = 5
+elif len(sys.argv) == 5:
+    N = int(sys.argv[1])
+    U = int(sys.argv[2])
+    d = int(sys.argv[3])
+    batch = int(sys.argv[4])
 else:
     if rank == 0:
         logging.info("ERROR: please check the input arguments")
     exit()
+
+N_repeat = batch #5  # number of repetitions to measure the average runtime.
+server_agg_gradient_epochs = [None] * N_repeat
+agg_client_hashes_epochs = [None] * N_repeat
+
+num_pk_per_user = 2
 
 if __name__ == "__main__":
 
@@ -405,7 +412,7 @@ if __name__ == "__main__":
 
         time_out.append(result_set)
 
-        pickle.dump(time_out, open('./results/VeriFL_fast_amortized_N' + str(N) +'_U' + str(U)+ '_d' + str(d), 'wb'), -1)
+        pickle.dump(time_out, open('./results/VeriFL_fast_amortized_N' + str(N) +'_U' + str(U) + '_d' + str(d) + + '_L' + str(batch), 'wb'), -1)
 
 
     elif rank <= N:
