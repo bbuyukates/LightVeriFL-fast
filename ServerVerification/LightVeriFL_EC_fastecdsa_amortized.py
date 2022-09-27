@@ -52,7 +52,7 @@ else:
         logging.info("ERROR: please check the input arguments")
     exit()
 
-N_repeat = batch #5  # number of repetitions to measure the average runtime.
+N_repeat = batch # batch size for amortization.
 server_agg_gradient_epochs = [None] * N_repeat
 agg_client_hashes_epochs = [None] * N_repeat
 
@@ -211,15 +211,6 @@ if __name__ == "__main__":
             agg_grad = [sum(x) % p_model for x in zip(*masked_grad_array)]
             #print('Before unmasking, agg masked grad is', agg_grad)
 
-            # grad_array = [[[] for j in range(cols)] for i in range(rows)]  # [[0] * cols] * rows
-            # grad_array = np.zeros((N, d))
-            # array_idx2 = 0
-            # for i in range(N):
-            #     rx_rank = i + 1
-            #     comm.Recv(grad_array[array_idx2, :], source=rx_rank)
-            #     array_idx2 += 1
-            # agg_grad = [sum(x) for x in zip(*grad_array)]
-
             # comm.Barrier()
 
             # 2.1 Receive the masked hash and noise from the users
@@ -295,9 +286,6 @@ if __name__ == "__main__":
                     agg_grad = np.mod(agg_grad + mask, p_model)
 
             #print('After  unmasking, agg masked grad is', agg_grad)
-
-            # h_agg = generate_hash(agg_grad, alpha, d)
-            # print('agg hash is', h_agg)
 
             # 3.1 Send the aggregate gradient to the surviving users
             # comm.Barrier()
@@ -430,41 +418,6 @@ if __name__ == "__main__":
 
         pickle.dump(time_out, open('./results/LightVeriFL_fast_amortized_N' + str(N) +'_U' + str(U) + '_d' + str(d) + '_L' + str(batch), 'wb'), -1)
 
-        '''
-        #Report the running time @ users
-        # comm.Barrier()
-        t_matrix = np.zeros((N, 4), dtype=float)
-        for i in range(N):
-            comm.Recv(t_matrix[i, :], source=i + 1)
-
-        # t_array = np.array([t_offline, t_offline_enc, t_offline_comm, t_hash_gen])
-        t_array_avg = np.mean(t_matrix, axis=0)
-
-        t_verif = np.zeros((len(surviving_users_indexes)), dtype=float)
-        for i in range(len(surviving_users_indexes)):
-            t_verif[i] = comm.recv(source=surviving_users_indexes[i] + 1)
-
-        print(t_verif)
-        t_verif_avg = np.mean(t_verif)
-
-        print(f"total running time = {t_total}")
-        print(
-            f"t_offline = {t_array_avg[0]}, t_offline_enc = {t_array_avg[1]}, t0_offline_comm = {t_array_avg[2]}, t_hash_gen = {t_array_avg[3]}, t_dec={t_dec}, t_verification = {t_verif_avg}")
-
-        time_out = []
-        result_set = {'N': N
-            , 'd': d
-            , 't_array_avg': t_array_avg
-            , 't_total': t_total
-            , 't_verification': t_verif_avg
-                      #   'drop_rate': drop_rate
-                      }
-
-        time_out.append(result_set)
-
-        pickle.dump(time_out, open('./results/LightVeriFL_amortized_N' + str(N) + '_d' + str(d), 'wb'), -1)
-        '''
-
     elif rank <= N:
         for i_trial in range(N_repeat):
             # comm.Barrier()
@@ -596,9 +549,8 @@ if __name__ == "__main__":
 
             # 1.4 Local model training
 
-            # generate gradient randomly for the time-being. These will come from the learning portion.
+            # generate gradient randomly for now. These will come from the training
             x_i = [rank] * d
-            # x_i = random.sample(range(d), k=d)
 
             # 1.5 Generate hash (h_i) and and mask hash with another point on the EC
             # t0_hash_gen = time.time()
@@ -652,9 +604,7 @@ if __name__ == "__main__":
                                           x not in surviving_users_indexes.tolist()]
 
             # 2.0 Send the local model to the server
-            '''
-            To do: SecAgg goes here
-            '''
+            
             # comm.Barrier()
             # if rank in U1 + 1:  # same as above
             #     comm.send(x_i, dest=0)
@@ -809,15 +759,3 @@ if __name__ == "__main__":
                 t_verification = time.time() - t0_verification
 
             comm.Barrier()
-
-            '''
-            #Report the running time @ users
-
-            # comm.Barrier()
-            t_array = np.array([t_offline, t_offline_enc, t_offline_comm, t_hash_gen])
-            comm.Send(t_array, dest=0)
-
-            # Surviving users also send the verification time
-            if rank in surviving_users_indexes + 1:
-                comm.send(t_verification, dest=0)
-            '''
