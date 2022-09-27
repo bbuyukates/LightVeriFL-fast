@@ -51,7 +51,7 @@ else:
         logging.info("ERROR: please check the input arguments")
     exit()
 
-N_repeat = batch #5  # number of repetitions to measure the average runtime.
+N_repeat = batch # batch size for amortization
 server_agg_gradient_epochs = [None] * N_repeat
 agg_client_hashes_epochs = [None] * N_repeat
 
@@ -195,15 +195,6 @@ if __name__ == "__main__":
             t2 = time.time()
 
             rows, cols = (len(U1), d)
-            # grad_array = [[[] for j in range(cols)] for i in range(rows)]  # [[0] * cols] * rows
-            # array_idx2 = 0
-            # for i in U1:
-            #     rx_rank = i + 1
-            #     grad_array[array_idx2] = comm.recv(source=rx_rank)
-            #     array_idx2 += 1
-
-            # agg_grad = [sum(x) % p_model for x in zip(*grad_array)]
-            # print('agg grad is', agg_grad)
 
             masked_grad_array = [[[] for j in range(cols)] for i in range(rows)]  # [[0] * cols] * rows
             array_idx2 = 0
@@ -267,9 +258,6 @@ if __name__ == "__main__":
 
             #print('After  unmasking, agg masked grad is', agg_grad[:5])
 
-            #h_agg = generate_hash(agg_grad, alpha, d)
-            #print('agg hash is', h_agg)
-
             # 3.3. Send the aggregate gradient to the surviving users
             for tx_rank in surviving_users_indexes + 1:
                 comm.Send(np.array(agg_grad), dest=tx_rank)
@@ -283,8 +271,7 @@ if __name__ == "__main__":
                 - Receive hashes from the surviving users.
                 - Broadcasts the received hashes to the surviving users
             '''
-            # In my current implementation, surviving users send their hash and noise directly to each other
-            # We can change this to sending via the server
+            
             comm.Barrier()
             t0_verification = time.time()
 
@@ -321,12 +308,6 @@ if __name__ == "__main__":
                 h_dec = BGW_decoding_EC(h_SS_buffer[i], surviving_users_indexes_actual, P256)
                 h_dec_array.append(h_dec)
 
-                # print()
-                # print(f"original hash of user {dropped_users_indexes[i]}      = {h_dec}")
-                # print(f"reconstructed hash of user {dropped_users_indexes[i]} = {h_dec}")
-
-                # h_dec = BGW_decoding(h_SS_buffer, surviving_users_indexes, p)
-
             # do a similar reconstruction for noise ss of the dropped users
             noise_SS_buffer = [[[] for j in range(cols)] for i in range(rows)]
             buffer_idx2 = 0
@@ -340,11 +321,6 @@ if __name__ == "__main__":
                 noise_dec = BGW_decoding_EC(noise_SS_buffer[i], surviving_users_indexes_actual, P256)
                 noise_dec_array.append(noise_dec)
 
-                # print()
-                # print(f"original hash of user {dropped_users_indexes[i]}      = {h_dec}")
-                # print(f"reconstructed noise of user {dropped_users_indexes[i]} = {noise_dec}")
-
-            # print("Shape of lista is : " + str(np.shape(noise_dec_array)))
             # server sends the reconstructed hashes and noises of the dropped users back to the surviving users
 
             for tx_rank in surviving_users_indexes + 1:
@@ -503,7 +479,6 @@ if __name__ == "__main__":
             # comm.Barrier()
 
             ## 1.1. Local training
-            # x_i = random.sample(range(p_model), k=d)
             x_i = [rank] * d
 
             ## 1.2. Hash generation
@@ -524,13 +499,6 @@ if __name__ == "__main__":
             h_SS = BGW_encoding_EC(h, N, T, P256)
             noise_SS = BGW_encoding_EC(Pedersen_noise, N, T, P256)
             t_SS_gen = time.time() - t0_SS
-
-            # # check the functionality of enc/dec
-            # h_dec = BGW_decoding_EC(h_SS[:T+1], range(T+1), curve)
-
-            # print("h and h_dec should be the same!")
-            # print(f"rank = {rank}, original hash={h}")
-            # print(f"rank = {rank}, decoded  hash={h_dec}")
 
             # comm.Barrier()
             t0_SS_comm = time.time()
